@@ -1,22 +1,17 @@
-#include <bits/stdc++.h>
-
-using namespace std;
+#include <iostream>
+#include <limits>
+#include <set>
+#include <vector>
 
 class edge{
 public:
     int to, time, flow, c, id, rev;
-    edge(){};
-    edge(int to, int time, int flow, int c, int id, int rev){
-        this->to = to;
-        this->time = time;
-        this->flow = flow;
-        this->c = c;
-        this->id = id;
-        this->rev = rev;
+    edge() = default;
+    edge(int to, int time, int flow, int c, int id, int rev) : to(to), time(time), flow(flow), c(c), id(id), rev(rev){
     }
 };
 
-void addEdge(vector<vector<edge>>& gr, int from, int to, int time, int ind){
+void addEdge(std::vector<std::vector<edge>>& gr, int from, int to, int time, int ind){
     gr[from].push_back(edge(to, time, 0, 1, ind, gr[to].size()));
     gr[to].push_back(edge(from, -time, 0, 0, ind, gr[from].size() - 1));
     gr[from].push_back(edge(to, -time, 0, 0, ind, gr[to].size()));
@@ -24,7 +19,7 @@ void addEdge(vector<vector<edge>>& gr, int from, int to, int time, int ind){
 }
 
 
-void dfs(vector<vector<edge>>& gr, int v, vector<vector<int>>& answer, double& cost, int& n, int& ind, bool& find) {
+void dfs(std::vector<std::vector<edge>>& gr, int v, std::vector<std::vector<int>>& answer, double& cost, int& n, int& ind, bool& find) {
     if (v == n - 1) {
         find = true;
         return;
@@ -42,14 +37,14 @@ void dfs(vector<vector<edge>>& gr, int v, vector<vector<int>>& answer, double& c
 }
 
 
-vector<int> dijkstra(vector<vector<edge>>& gr, int v, int& n) {
-    int INF = 1e9;
-    vector<int> dist(n, INF);
-    vector<bool> used(n, false);
-    vector<int> parent(n, -1);
+std::vector<int> dijkstra(std::vector<std::vector<edge>>& gr, int v, int& n) {
+    static constexpr int INF = std::numeric_limits<int>::max();
+    std::vector<int> dist(n, INF);
+    std::vector<bool> used(n, false);
+    std::vector<int> parent(n, -1);
     dist[v] = 0;
     parent[v] = -1;
-    set<pair<int,int>> heap;
+    std::set<std::pair<int,int>> heap;
     heap.insert({dist[v], v});
     while (!heap.empty()) {
         int now = heap.begin()->second;
@@ -70,16 +65,16 @@ vector<int> dijkstra(vector<vector<edge>>& gr, int v, int& n) {
     return dist;
 }
 
-vector<pair<int, int>> dijkstraFindFlow(vector<vector<edge>>& gr, vector<int>& potential, int v, vector<int>& dist, int& n) {
-    int INF = 1e9;
-    vector<bool> used(n, false);
+std::vector<std::pair<int, int>> dijkstraFindFlow(std::vector<std::vector<edge>>& gr, std::vector<int>& potential, int v, std::vector<int>& dist, int& n) {
+    static constexpr int INF = std::numeric_limits<int>::max();
+    std::vector<bool> used(n, false);
     dist.clear();
     dist.assign(n, INF);
-    vector<int> parent(n, -1);
-    vector<int> cost(n, -1);
+    std::vector<int> parent(n, -1);
+    std::vector<int> cost(n, -1);
     dist[v] = 0;
     parent[v] = -1;
-    set<pair<int,int>> heap;
+    std::set<std::pair<int,int>> heap;
     heap.insert({dist[v], v});
     while (!heap.empty()) {
         int now = heap.begin()->second;
@@ -100,7 +95,7 @@ vector<pair<int, int>> dijkstraFindFlow(vector<vector<edge>>& gr, vector<int>& p
             }
         }
     }
-    vector<pair<int,int>> ans;
+    std::vector<std::pair<int,int>> ans;
     int here = n - 1;
     while (parent[here] != -1) {
         ans.push_back({here, cost[here]});
@@ -110,56 +105,36 @@ vector<pair<int, int>> dijkstraFindFlow(vector<vector<edge>>& gr, vector<int>& p
     return ans;
 }
 
-int main() {
-    ios_base::sync_with_stdio(false);
-    cin.tie();
-    cout.precision(15);
-    int n, m, k;
-    cin >> n >> m >> k;
-    vector<vector<edge>> gr;
-    vector<int> update;
-    vector<int> potential;
-    vector<edge> arr(m);
+void doFlow(std::vector<std::vector<edge>>& gr, std::vector<std::pair<int, int>>& answer, std::vector<int>& potential) {
+    for (int i = answer.size() - 1; i > 0; --i) {
+        int from = answer[i].first;
+        int to = answer[i - 1].first;
+        int time = answer[i - 1].second;
+        for (int j = 0; j < gr[from].size(); ++j) {
+            if (gr[from][j].c - gr[from][j].flow > 0 && gr[from][j].to == to && gr[from][j].time + potential[from] - potential[to] == time) {
+                gr[from][j].flow++;
+                gr[to][gr[from][j].rev].flow--;
+                break;
+            }
+        }
+    }
+}
+
+void getData(int& n, int& m, int& k, std::vector<std::vector<edge>>& gr) {
+    std::cin >> n >> m >> k;
     gr.resize(n);
     for (int i = 0; i < m; ++i) {
         int from, to, time;
-        cin >> from >> to >> time;
+        std::cin >> from >> to >> time;
         from--;
         to--;
         addEdge(gr, from, to, time, i);
     }
-    bool ok = true;
-    potential = dijkstra(gr, 0, n);
-    int how = 0;
-    double allTime = 0;
-    while (ok) {
-        vector<pair<int, int>> answer = dijkstraFindFlow(gr, potential, 0, update, n);
-        if (answer.size() == 1) {
-            ok = false;
-            break;
-        }
-        for (int i = answer.size() - 1; i > 0; --i) {
-            int from = answer[i].first;
-            int to = answer[i - 1].first;
-            int time = answer[i - 1].second;
-            for (int j = 0; j < gr[from].size(); ++j) {
-                if (gr[from][j].c - gr[from][j].flow > 0 && gr[from][j].to == to && gr[from][j].time + potential[from] - potential[to] == time) {
-                    gr[from][j].flow++;
-                    gr[to][gr[from][j].rev].flow--;
-                    break;
-                }
-            }
-        }
-        how++;
-        if (how == k) {
-            break;
-        }
-        for (int i = 0; i < n; ++i) {
-            potential[i] = potential[i] + update[i];
-        }
-    }
+}
+
+void print(bool ok, std::vector<std::vector<edge>>& gr, int& n, int& k) {
     if (ok) {
-        vector<vector<int>> answer;
+        std::vector<std::vector<int>> answer;
         answer.resize(k);
         double cost = 0;
         int ind = 0;
@@ -168,16 +143,47 @@ int main() {
             dfs(gr, 0, answer, cost, n, ind, find);
             ind++;
         }
-        cout << cost / (double)k << endl;
+        std::cout << cost / (double)k << std::endl;
         for (int i = 0; i < k; ++i) {
-            cout << answer[i].size() << " ";
+            std::cout << answer[i].size() << " ";
             for (int j = 0; j < answer[i].size(); ++j) {
-                cout << answer[i][j] + 1 << " ";
+                std::cout << answer[i][j] + 1 << " ";
             }
-            cout << endl;
+            std::cout << std::endl;
         }
     } else {
-        cout << -1;
+        std::cout << -1;
     }
+}
+
+int main() {
+    std::ios_base::sync_with_stdio(false);
+    std::cin.tie();
+    std::cout.precision(15);
+    int n, m, k;
+    std::vector<std::vector<edge>> gr;
+    std::vector<int> update;
+    std::vector<int> potential;
+    getData(n, m, k, gr);
+    bool ok = true;
+    potential = dijkstra(gr, 0, n);
+    int how = 0;
+    double allTime = 0;
+    while (ok) {
+        std::vector<std::pair<int, int>> answer = dijkstraFindFlow(gr, potential, 0, update, n);
+        if (answer.size() == 1) {
+            ok = false;
+            break;
+        }
+        doFlow(gr, answer, potential);
+        how++;
+        if (how == k) {
+            break;
+        }
+        for (int i = 0; i < n; ++i) {
+            potential[i] = potential[i] + update[i];
+        }
+    }
+    print(ok, gr, n, k);
     return 0;
 }
